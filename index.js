@@ -28,7 +28,7 @@ const sites = [
     name: "Apex4u",
     url: "https://apex4u.com/sign-in",
     steps: [
-      { action: "wait", ms: 3000 },
+      { action: "wait", ms: 5000 },
       { action: "fill", selector: 'input.form-field' },
       { action: "wait", ms: 500 },
       { action: "click", selector: '[data-testid="proceed-button"]' },
