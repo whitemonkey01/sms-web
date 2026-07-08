@@ -35,6 +35,19 @@ const sites = [
       { action: "wait", ms: 2000 },
     ],
   },
+  {
+    name: "MedEasy",
+    url: "https://medeasy.health/",
+    steps: [
+      { action: "wait", ms: 3000 },
+      { action: "click", selector: 'text=Sign In' },
+      { action: "wait", ms: 3000 },
+      { action: "fill", selector: 'input[name="phone"]' },
+      { action: "wait", ms: 500 },
+      { action: "click", selector: 'button:has-text("Send OTP")' },
+      { action: "wait", ms: 2000 },
+    ],
+  },
 ];
 
 async function sendBDTickets(phone) {
@@ -84,6 +97,24 @@ async function sendBDTickets(phone) {
   }
 }
 
+async function sendMedEasy(phone) {
+  const https = require('https');
+  const formatted = `+880${phone.slice(-10)}`;
+  return new Promise((resolve) => {
+    https.get(`https://api.medeasy.health/api/send-otp/${formatted}/`, { headers: { Accept: 'application/json' } }, (res) => {
+      let d = '';
+      res.on('data', c => d += c);
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          resolve({ name: 'MedEasy', status: 'DONE' });
+        } else {
+          resolve({ name: 'MedEasy', status: 'FAILED', error: `HTTP ${res.statusCode}` });
+        }
+      });
+    }).on('error', (err) => resolve({ name: 'MedEasy', status: 'FAILED', error: err.message.split('\n')[0] }));
+  });
+}
+
 const args = process.argv.slice(2);
 const phone = args[0] || process.env.PHONE;
 const count = parseInt(args[1] || process.env.COUNT || "1");
@@ -129,6 +160,7 @@ async function runSite(browser, site, phone) {
     const results = await Promise.allSettled([
       ...sites.map((site) => runSite(browser, site, phone)),
       sendBDTickets(phone),
+      sendMedEasy(phone),
     ]);
     for (const r of results) {
       const v = r.value || {};
