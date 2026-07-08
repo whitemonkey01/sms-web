@@ -50,12 +50,16 @@ const sites = [
   },
   {
     name: "RedX",
-    url: "https://redx.com.bd/login/",
+    url: "https://redx.com.bd/registration/",
     steps: [
       { action: "wait", ms: 3000 },
-      { action: "fill", selector: 'input[name="phone"]' },
+      { action: "fill", selector: 'input[name="userName"]', value: "Test Merchant" },
+      { action: "fill", selector: 'input[name="shopName"]', value: "Test Shop BD" },
+      { action: "fill", selector: 'input[name="parcelCount"]', value: "50" },
+      { action: "fill", selector: 'input[name="phoneNumber"]' },
+      { action: "check", selector: 'input[name="hasTermsAndConditionAccepted"]' },
       { action: "wait", ms: 500 },
-      { action: "click", selector: 'button:has-text("Log in")' },
+      { action: "click", selector: 'button:has-text("Sign up")' },
       { action: "wait", ms: 2000 },
     ],
   },
@@ -128,10 +132,9 @@ async function sendMedEasy(phone) {
 
 function sendRedX(phone) {
   const https = require('https');
-  const formatted = `880${phone.slice(-10)}`;
   return new Promise((resolve) => {
-    const data = JSON.stringify({ phone: formatted });
-    const req = https.request('https://api.redx.com.bd/v4/auth/request-password-reset-otp', {
+    const data = JSON.stringify({ phoneNumber: phone });
+    const req = https.request('https://api.redx.com.bd/v1/merchant/registration/generate-registration-otp', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -175,12 +178,16 @@ async function runSite(browser, site, phone) {
     for (const step of site.steps) {
       if (step.action === "fill") {
         await page.waitForSelector(step.selector, { timeout: 15000 });
-        await page.fill(step.selector, phone);
+        const val = step.value || phone;
+        await page.fill(step.selector, val);
       } else if (step.action === "click") {
         await page.waitForSelector(step.selector, { timeout: 15000 });
         await page.click(step.selector);
       } else if (step.action === "wait") {
         await page.waitForTimeout(step.ms);
+      } else if (step.action === "check") {
+        await page.waitForSelector(step.selector, { timeout: 15000 });
+        await page.check(step.selector);
       }
     }
 
