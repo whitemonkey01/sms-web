@@ -49,18 +49,16 @@ const sites = [
     ],
   },
   {
-    name: "RedX",
-    url: "https://redx.com.bd/registration/",
+    name: "Chorki",
+    url: "https://www.chorki.com/login",
     steps: [
-      { action: "wait", ms: 3000 },
-      { action: "fill", selector: 'input[name="userName"]', value: "Test Merchant" },
-      { action: "fill", selector: 'input[name="shopName"]', value: "Test Shop BD" },
-      { action: "fill", selector: 'input[name="parcelCount"]', value: "50" },
-      { action: "fill", selector: 'input[name="phoneNumber"]' },
-      { action: "check", selector: 'input[name="hasTermsAndConditionAccepted"]' },
+      { action: "wait", ms: 5000 },
+      { action: "wait_turnstile" },
+      { action: "fill_phone", selector: 'input.react-international-phone-input' },
+      { action: "check", selector: 'input[name="userConsent"]' },
       { action: "wait", ms: 500 },
-      { action: "click", selector: 'button:has-text("Sign up")' },
-      { action: "wait", ms: 2000 },
+      { action: "click", selector: 'button[type="submit"]' },
+      { action: "wait", ms: 3000 },
     ],
   },
 ];
@@ -188,6 +186,17 @@ async function runSite(browser, site, phone) {
       } else if (step.action === "check") {
         await page.waitForSelector(step.selector, { timeout: 15000 });
         await page.check(step.selector);
+      } else if (step.action === "fill_phone") {
+        await page.waitForSelector(step.selector, { timeout: 15000 });
+        await page.fill(step.selector, `+880${phone.slice(-10)}`);
+      } else if (step.action === "wait_turnstile") {
+        await page.waitForTimeout(5000);
+        try {
+          await page.waitForFunction(() => {
+            const el = document.querySelector('input[name="cf-turnstile-response"]');
+            return el && el.value && el.value.length > 0;
+          }, { timeout: 20000 });
+        } catch {}
       }
     }
 
