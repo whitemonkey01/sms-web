@@ -61,6 +61,15 @@ const sites = [
       { action: "wait", ms: 3000 },
     ],
   },
+  {
+    name: "Robi",
+    url: "https://www.robi.com.bd/en/auth/login",
+    steps: [
+      { action: "wait", ms: 5000 },
+      { action: "robi" },
+      { action: "wait", ms: 4000 },
+    ],
+  },
 ];
 
 async function sendBDTickets(phone) {
@@ -197,6 +206,28 @@ async function runSite(browser, site, phone) {
             return el && el.value && el.value.length > 0;
           }, { timeout: 20000 });
         } catch {}
+      } else if (step.action === "robi") {
+        await page.evaluate((phone) => {
+          const accept = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Accept Cookies'));
+          if (accept) accept.click();
+          setTimeout(() => {
+            const bd = document.querySelector('.MuiBackdrop-root');
+            if (bd) bd.click();
+          }, 500);
+          setTimeout(() => {
+            const btn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Log In'));
+            if (btn) btn.click();
+          }, 1500);
+          setTimeout(() => {
+            const input = document.querySelector('input[aria-label="mobile-number"]');
+            if (!input) return;
+            const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+            nativeSetter.call(input, phone);
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            const sendBtn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Send OTP'));
+            if (sendBtn && !sendBtn.disabled) sendBtn.click();
+          }, 3500);
+        }, phone);
       }
     }
 
