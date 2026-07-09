@@ -89,7 +89,9 @@ const sites = [
     url: "https://ostad.app/login",
     steps: [
       { action: "wait", ms: 3000 },
-      { action: "fill", selector: 'input[placeholder*="ফোন"]' },
+      { action: "click", selector: '.cursor-pointer.py-2.px-3:nth-of-type(2)' },
+      { action: "wait", ms: 1000 },
+      { action: "fill", selector: 'input[type="number"]' },
       { action: "wait", ms: 500 },
       { action: "click", selector: 'button[type="submit"]' },
       { action: "wait", ms: 3000 },
