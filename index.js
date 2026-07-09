@@ -85,6 +85,22 @@ const sites = [
     ],
   },
   {
+    name: "Kimi",
+    url: "https://www.kimi.com/login",
+    waitUntil: "domcontentloaded",
+    steps: [
+      { action: "wait", ms: 8000 },
+      { action: "click", selector: 'input[placeholder="+86"]' },
+      { action: "wait", ms: 500 },
+      { action: "click", selector: 'span:has-text("+880")' },
+      { action: "wait", ms: 500 },
+      { action: "fill", selector: 'input[placeholder="Phone number"]' },
+      { action: "wait", ms: 500 },
+      { action: "click", selector: 'button:has-text("Send Code")' },
+      { action: "wait", ms: 3000 },
+    ],
+  },
+  {
     name: "Ostad",
     url: "https://ostad.app/login",
     steps: [
