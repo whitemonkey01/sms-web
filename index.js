@@ -366,7 +366,7 @@ if ((args.length > 0 || hasEnv) && !isMenu) {
     process.stdin.on('end', () => {
       const input = lines.join('').trim().split('\n').map(l => l.trim()).filter(Boolean);
       let i = 0;
-      const nextInput = () => input[i++] || '';
+      const nextInput = () => (i < input.length ? input[i++] : null);
 
       async function showSettings() {
         while (true) {
@@ -377,7 +377,9 @@ if ((args.length > 0 || hasEnv) && !isMenu) {
             console.log(`  ${i + 1}. ${sites[i].name} [${status}]`);
           }
           console.log("  B. Back to main menu");
-          const choice = nextInput().toUpperCase();
+          const raw = nextInput();
+          if (raw === null) break;
+          const choice = raw.toUpperCase();
           console.log("Enter number to toggle, B to go back: " + choice);
           if (choice === 'B') break;
           const idx = parseInt(choice) - 1;
@@ -403,15 +405,18 @@ if ((args.length > 0 || hasEnv) && !isMenu) {
           console.log("2. Settings");
           console.log("0. Exit");
           const choice = nextInput();
+          if (choice === null) break;
           console.log("Enter choice: " + choice);
           if (choice === '0') break;
           if (choice === '2') { await showSettings(); continue; }
           if (choice === '1') {
             const phone = nextInput();
+            if (phone === null) { console.log("Phone number required"); break; }
             console.log("Phone number: " + phone);
-            if (!phone) { console.log("Phone number required"); continue; }
-            const count = parseInt(nextInput()) || 1;
-            const delay = parseInt(nextInput()) || 3;
+            const c = nextInput();
+            const d = nextInput();
+            const count = parseInt(c) || 1;
+            const delay = parseInt(d) || 3;
             run(phone, count, delay).catch(console.error);
             return;
           }
