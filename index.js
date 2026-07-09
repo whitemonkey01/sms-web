@@ -267,7 +267,7 @@ async function runSite(browser, site, phone) {
 async function run(phone, count, delay) {
   const disabled = loadDisabled();
   const activeSites = sites.filter(s => !disabled.includes(s.name));
-  const browser = await chromium.launch({ headless: false });
+  const browser = await chromium.launch({ headless: process.env.HEADLESS === 'false' ? false : true });
 
   for (let i = 0; i < count; i++) {
     console.log(`[${i + 1}/${count}]`);
@@ -292,7 +292,9 @@ async function run(phone, count, delay) {
 }
 
 const args = process.argv.slice(2);
-if (args.length > 0 && args[0] !== 'menu' && args[0] !== 'interactive') {
+const hasEnv = !!(process.env.PHONE || process.env.COUNT || process.env.DELAY);
+const isMenu = args[0] === 'menu' || args[0] === 'interactive';
+if ((args.length > 0 || hasEnv) && !isMenu) {
   const phone = args[0] || process.env.PHONE;
   const count = parseInt(args[1] || process.env.COUNT || "1");
   const delay = parseInt(args[2] || process.env.DELAY || "3");
