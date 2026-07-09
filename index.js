@@ -70,6 +70,20 @@ const sites = [
       { action: "wait", ms: 4000 },
     ],
   },
+  {
+    name: "MyGov",
+    url: "https://idp-v2.live.mygov.bd/registration",
+    waitUntil: "domcontentloaded",
+    steps: [
+      { action: "wait", ms: 3000 },
+      { action: "fill", selector: 'input[name="citizen_name"]', value: "Test User" },
+      { action: "wait", ms: 500 },
+      { action: "fill", selector: 'input#mobile' },
+      { action: "wait", ms: 500 },
+      { action: "click", selector: 'button[type="submit"]' },
+      { action: "wait", ms: 3000 },
+    ],
+  },
 ];
 
 async function sendBDTickets(phone) {
@@ -192,7 +206,7 @@ async function runSite(browser, site, phone) {
   const ctx = await browser.newContext();
   const page = await ctx.newPage();
   try {
-    await page.goto(site.url, { waitUntil: "networkidle", timeout: 30000 });
+    await page.goto(site.url, { waitUntil: site.waitUntil || "networkidle", timeout: 30000 });
 
     for (const step of site.steps) {
       if (step.action === "fill") {
