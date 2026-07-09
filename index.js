@@ -85,6 +85,17 @@ const sites = [
     ],
   },
   {
+    name: "LeraveCraze",
+    url: "https://www.lerevecraze.com/login/",
+    steps: [
+      { action: "wait", ms: 3000 },
+      { action: "fill", selector: "input#account_display_name" },
+      { action: "wait", ms: 500 },
+      { action: "click", selector: "input#lrv-login-btn" },
+      { action: "wait", ms: 3000 },
+    ],
+  },
+  {
     name: "PizzaHutBD",
     url: "https://www.pizzahutbd.com/customer/login",
     steps: [
