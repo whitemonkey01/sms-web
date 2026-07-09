@@ -85,6 +85,25 @@ const sites = [
     ],
   },
   {
+    name: "Sailor",
+    url: "https://sailor.clothing/login",
+    steps: [
+      { action: "wait", ms: 3000 },
+      { action: "click", selector: 'button:has-text("registration")' },
+      { action: "wait", ms: 1000 },
+      { action: "fill", selector: 'input[placeholder="01XXXXXXXXX"]' },
+      { action: "wait", ms: 300 },
+      { action: "fill_rnd", selector: 'input[placeholder="Enter email address (example@example.com)"]', prefix: "sailor_", suffix: "@mail.com" },
+      { action: "wait", ms: 300 },
+      { action: "fill", selector: 'input[placeholder="Enter Password"]', value: "Test1234" },
+      { action: "wait", ms: 300 },
+      { action: "fill", selector: 'input[placeholder="Enter confirm-password"]', value: "Test1234" },
+      { action: "wait", ms: 300 },
+      { action: "click", selector: 'button:has-text("create account")' },
+      { action: "wait", ms: 3000 },
+    ],
+  },
+  {
     name: "LeraveCraze",
     url: "https://www.lerevecraze.com/login/",
     steps: [
@@ -293,6 +312,10 @@ async function runSite(browser, site, phone) {
         } catch {}
       } else if (step.action === "goto") {
         await page.goto(step.url, { waitUntil: "networkidle", timeout: 30000 });
+      } else if (step.action === "fill_rnd") {
+        await page.waitForSelector(step.selector, { timeout: 15000 });
+        const val = `${step.prefix || ''}${Date.now()}${step.suffix || ''}`;
+        await page.fill(step.selector, val);
       } else if (step.action === "robi") {
         await page.evaluate((phone) => {
           const accept = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Accept Cookies'));
