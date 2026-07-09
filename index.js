@@ -179,27 +179,26 @@ function sendRedX(phone) {
   });
 }
 
-const args = process.argv.slice(2);
-const phone = args[0] || process.env.PHONE;
-const count = parseInt(args[1] || process.env.COUNT || "1");
-const delay = parseInt(args[2] || process.env.DELAY || "3");
-
 const fs = require('fs');
 const configPath = process.env.SMS_WEB_CONFIG || require('os').homedir() + '/.sms-web-config.json';
 const localConfigPath = __dirname + '/.sms-web-config.json';
-let disabled = (process.env.DISABLED || '').split(',').map(s => s.trim()).filter(Boolean);
-for (const p of [configPath, localConfigPath]) {
-  try {
-    const cfg = JSON.parse(fs.readFileSync(p, 'utf8'));
-    if (cfg.disabled) disabled = disabled.concat(cfg.disabled);
-  } catch {}
-}
-const activeSites = sites.filter(s => !disabled.includes(s.name));
 
-if (!phone) {
-  console.error("Usage: sms-web <phone> [count] [delay]");
-  console.error("   or:  PHONE=xxx COUNT=2 DELAY=3 sms-web");
-  process.exit(1);
+function loadDisabled() {
+  let disabled = (process.env.DISABLED || '').split(',').map(s => s.trim()).filter(Boolean);
+  for (const p of [configPath, localConfigPath]) {
+    try {
+      const cfg = JSON.parse(fs.readFileSync(p, 'utf8'));
+      if (cfg.disabled) disabled = disabled.concat(cfg.disabled);
+    } catch {}
+  }
+  return disabled;
+}
+
+function saveConfig(disabled) {
+  const cfg = JSON.stringify({ disabled: [...new Set(disabled)] }, null, 2);
+  for (const p of [configPath, localConfigPath]) {
+    try { fs.writeFileSync(p, cfg); } catch {}
+  }
 }
 
 async function runSite(browser, site, phone) {
@@ -265,7 +264,9 @@ async function runSite(browser, site, phone) {
   }
 }
 
-(async () => {
+async function run(phone, count, delay) {
+  const disabled = loadDisabled();
+  const activeSites = sites.filter(s => !disabled.includes(s.name));
   const browser = await chromium.launch({ headless: false });
 
   for (let i = 0; i < count; i++) {
@@ -288,4 +289,134 @@ async function runSite(browser, site, phone) {
 
   await browser.close();
   console.log("Done");
-})().catch(console.error);
+}
+
+const args = process.argv.slice(2);
+if (args.length > 0 && args[0] !== 'menu' && args[0] !== 'interactive') {
+  const phone = args[0] || process.env.PHONE;
+  const count = parseInt(args[1] || process.env.COUNT || "1");
+  const delay = parseInt(args[2] || process.env.DELAY || "3");
+  if (!phone) {
+    console.error("Usage: sms-web <phone> [count] [delay]");
+    console.error("   or:  PHONE=xxx COUNT=2 DELAY=3 sms-web");
+    process.exit(1);
+  }
+  run(phone, count, delay).catch(console.error);
+} else {
+  if (process.stdin.isTTY) {
+    const readline = require('readline');
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    const ask = (q) => new Promise(r => rl.question(q, r));
+
+    async function showSettings() {
+      while (true) {
+        let disabled = loadDisabled();
+        console.log("\n=== Settings: Enable/Disable Websites ===");
+        for (let i = 0; i < sites.length; i++) {
+          const status = disabled.includes(sites[i].name) ? "DISABLED" : "ENABLED";
+          console.log(`  ${i + 1}. ${sites[i].name} [${status}]`);
+        }
+        console.log("  B. Back to main menu");
+        const choice = (await ask("\nEnter number to toggle, B to go back: ")).trim().toUpperCase();
+        if (choice === 'B') break;
+        const idx = parseInt(choice) - 1;
+        if (idx >= 0 && idx < sites.length) {
+          let current = loadDisabled();
+          const name = sites[idx].name;
+          if (current.includes(name)) {
+            current = current.filter(n => n !== name);
+          } else {
+            current.push(name);
+          }
+          saveConfig(current);
+          const after = loadDisabled();
+          console.log(`  ${name} is now ${after.includes(name) ? 'DISABLED' : 'ENABLED'}`);
+        }
+      }
+    }
+
+    async function showMenu() {
+      console.log("\n=== SMS-Web OTP Sender ===");
+      while (true) {
+        console.log("\n1. Send OTP");
+        console.log("2. Settings");
+        console.log("0. Exit");
+        const choice = (await ask("\nEnter choice: ")).trim();
+        if (choice === '0') break;
+        if (choice === '2') { await showSettings(); continue; }
+        if (choice === '1') {
+          const phone = (await ask("Phone number: ")).trim();
+          if (!phone) { console.log("Phone number required"); continue; }
+          const count = parseInt(await ask("Count (1): ")) || 1;
+          const delay = parseInt(await ask("Delay in seconds (3): ")) || 3;
+          rl.close();
+          await run(phone, count, delay).catch(console.error);
+          return;
+        }
+      }
+      rl.close();
+    }
+
+    showMenu().catch(console.error);
+  } else {
+    const lines = [];
+    process.stdin.on('data', d => lines.push(d.toString()));
+    process.stdin.on('end', () => {
+      const input = lines.join('').trim().split('\n').map(l => l.trim()).filter(Boolean);
+      let i = 0;
+      const nextInput = () => input[i++] || '';
+
+      async function showSettings() {
+        while (true) {
+          let disabled = loadDisabled();
+          console.log("\n=== Settings: Enable/Disable Websites ===");
+          for (let i = 0; i < sites.length; i++) {
+            const status = disabled.includes(sites[i].name) ? "DISABLED" : "ENABLED";
+            console.log(`  ${i + 1}. ${sites[i].name} [${status}]`);
+          }
+          console.log("  B. Back to main menu");
+          const choice = nextInput().toUpperCase();
+          console.log("Enter number to toggle, B to go back: " + choice);
+          if (choice === 'B') break;
+          const idx = parseInt(choice) - 1;
+          if (idx >= 0 && idx < sites.length) {
+            let current = loadDisabled();
+            const name = sites[idx].name;
+            if (current.includes(name)) {
+              current = current.filter(n => n !== name);
+            } else {
+              current.push(name);
+            }
+            saveConfig(current);
+            const after = loadDisabled();
+            console.log(`  ${name} is now ${after.includes(name) ? 'DISABLED' : 'ENABLED'}`);
+          }
+        }
+      }
+
+      async function showMenu() {
+        console.log("\n=== SMS-Web OTP Sender ===");
+        while (true) {
+          console.log("\n1. Send OTP");
+          console.log("2. Settings");
+          console.log("0. Exit");
+          const choice = nextInput();
+          console.log("Enter choice: " + choice);
+          if (choice === '0') break;
+          if (choice === '2') { await showSettings(); continue; }
+          if (choice === '1') {
+            const phone = nextInput();
+            console.log("Phone number: " + phone);
+            if (!phone) { console.log("Phone number required"); continue; }
+            const count = parseInt(nextInput()) || 1;
+            const delay = parseInt(nextInput()) || 3;
+            run(phone, count, delay).catch(console.error);
+            return;
+          }
+        }
+      }
+
+      showMenu().catch(console.error);
+    });
+  }
+}
