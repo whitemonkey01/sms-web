@@ -193,6 +193,25 @@ const sites = [
       { action: "wait", ms: 3000 },
     ],
   },
+  {
+    name: "Bishworang",
+    url: "https://www.bishworang.com.bd/login",
+    steps: [
+      { action: "wait", ms: 3000 },
+      { action: "bishworang_forgot" },
+      { action: "wait", ms: 3000 },
+    ],
+  },
+  {
+    name: "Ilyn",
+    url: "https://ilyn.global/bd/en/auth/forgot-password",
+    waitUntil: "domcontentloaded",
+    steps: [
+      { action: "wait", ms: 6000 },
+      { action: "ilyn_forgot" },
+      { action: "wait", ms: 5000 },
+    ],
+  },
 ];
 
 async function sendBDTickets(phone) {
@@ -349,6 +368,35 @@ async function runSite(browser, site, phone) {
       } else if (step.action === "select") {
         await page.waitForSelector(step.selector, { timeout: 15000 });
         await page.selectOption(step.selector, step.value);
+      } else if (step.action === "bishworang_forgot") {
+        await page.evaluate((phone) => {
+          const a = document.querySelector('a.forget-pass');
+          if (a) a.click();
+          setTimeout(() => {
+            const inp = document.querySelector('.forgot-pass-modal input');
+            if (inp) {
+              inp.value = phone;
+              inp.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            setTimeout(() => {
+              const btn = document.querySelector('.forgot-pass-modal .send-btn');
+              if (btn) btn.click();
+            }, 500);
+          }, 1000);
+        }, phone);
+      } else if (step.action === "ilyn_forgot") {
+        await page.evaluate((phone) => {
+          const inp = document.querySelector('input[type="text"]');
+          if (!inp) return;
+          const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+          nativeSetter.call(inp, phone);
+          inp.dispatchEvent(new Event('input', { bubbles: true }));
+          inp.dispatchEvent(new Event('change', { bubbles: true }));
+          setTimeout(() => {
+            const btn = document.querySelector('button[type="submit"]');
+            if (btn && !btn.disabled) btn.click();
+          }, 500);
+        }, phone);
       } else if (step.action === "robi") {
         await page.evaluate((phone) => {
           const accept = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Accept Cookies'));
