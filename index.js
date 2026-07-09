@@ -170,6 +170,18 @@ const phone = args[0] || process.env.PHONE;
 const count = parseInt(args[1] || process.env.COUNT || "1");
 const delay = parseInt(args[2] || process.env.DELAY || "3");
 
+const fs = require('fs');
+const configPath = process.env.SMS_WEB_CONFIG || require('os').homedir() + '/.sms-web-config.json';
+const localConfigPath = __dirname + '/.sms-web-config.json';
+let disabled = (process.env.DISABLED || '').split(',').map(s => s.trim()).filter(Boolean);
+for (const p of [configPath, localConfigPath]) {
+  try {
+    const cfg = JSON.parse(fs.readFileSync(p, 'utf8'));
+    if (cfg.disabled) disabled = disabled.concat(cfg.disabled);
+  } catch {}
+}
+const activeSites = sites.filter(s => !disabled.includes(s.name));
+
 if (!phone) {
   console.error("Usage: sms-web <phone> [count] [delay]");
   console.error("   or:  PHONE=xxx COUNT=2 DELAY=3 sms-web");
@@ -245,7 +257,7 @@ async function runSite(browser, site, phone) {
   for (let i = 0; i < count; i++) {
     console.log(`[${i + 1}/${count}]`);
     const results = await Promise.allSettled([
-      ...sites.map((site) => runSite(browser, site, phone)),
+      ...activeSites.map((site) => runSite(browser, site, phone)),
       sendBDTickets(phone),
       sendMedEasy(phone),
       sendRedX(phone),
