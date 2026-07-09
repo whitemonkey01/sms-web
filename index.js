@@ -85,6 +85,26 @@ const sites = [
     ],
   },
   {
+    name: "PizzaHutBD",
+    url: "https://www.pizzahutbd.com/customer/login",
+    steps: [
+      { action: "wait", ms: 3000 },
+      { action: "fill", selector: "input#locationInput", value: "Gulshan 1" },
+      { action: "wait", ms: 1500 },
+      { action: "click", selector: ".pac-item" },
+      { action: "wait", ms: 1000 },
+      { action: "click", selector: "button.confirm-btn" },
+      { action: "wait", ms: 4000 },
+      { action: "goto", url: "https://www.pizzahutbd.com/customer/login" },
+      { action: "wait", ms: 3000 },
+      { action: "fill", selector: "input#full_name", value: "User" },
+      { action: "fill", selector: "input#phone" },
+      { action: "wait", ms: 500 },
+      { action: "click", selector: 'button:has-text("Sign In")' },
+      { action: "wait", ms: 5000 },
+    ],
+  },
+  {
     name: "Kimi",
     url: "https://www.kimi.com/login",
     waitUntil: "domcontentloaded",
@@ -260,6 +280,8 @@ async function runSite(browser, site, phone) {
             return el && el.value && el.value.length > 0;
           }, { timeout: 20000 });
         } catch {}
+      } else if (step.action === "goto") {
+        await page.goto(step.url, { waitUntil: "networkidle", timeout: 30000 });
       } else if (step.action === "robi") {
         await page.evaluate((phone) => {
           const accept = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Accept Cookies'));
