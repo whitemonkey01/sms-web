@@ -115,6 +115,36 @@ const sites = [
     ],
   },
   {
+    name: "Othoba",
+    url: "https://othoba.com/register?returnUrl=%2F",
+    waitUntil: "domcontentloaded",
+    steps: [
+      { action: "wait", ms: 4000 },
+      { action: "fill", selector: "input#Phone" },
+      { action: "wait", ms: 300 },
+      { action: "fill_rnd", selector: "input#Email", prefix: "oth_", suffix: "@mail.com" },
+      { action: "wait", ms: 300 },
+      { action: "fill", selector: "input#FirstName", value: "Test" },
+      { action: "wait", ms: 300 },
+      { action: "fill", selector: "input#LastName", value: "User" },
+      { action: "wait", ms: 300 },
+      { action: "click", selector: 'label:has-text("Male")' },
+      { action: "wait", ms: 300 },
+      { action: "select", selector: 'select[name="DateOfBirthDay"]', value: "15" },
+      { action: "wait", ms: 200 },
+      { action: "select", selector: 'select[name="DateOfBirthMonth"]', value: "6" },
+      { action: "wait", ms: 200 },
+      { action: "select", selector: 'select[name="DateOfBirthYear"]', value: "1995" },
+      { action: "wait", ms: 300 },
+      { action: "fill", selector: "input#Password", value: "Test1234" },
+      { action: "wait", ms: 300 },
+      { action: "fill", selector: "input#ConfirmPassword", value: "Test1234" },
+      { action: "wait", ms: 300 },
+      { action: "click", selector: "button#register-button" },
+      { action: "wait", ms: 5000 },
+    ],
+  },
+  {
     name: "PizzaHutBD",
     url: "https://www.pizzahutbd.com/customer/login",
     steps: [
@@ -316,6 +346,9 @@ async function runSite(browser, site, phone) {
         await page.waitForSelector(step.selector, { timeout: 15000 });
         const val = `${step.prefix || ''}${Date.now()}${step.suffix || ''}`;
         await page.fill(step.selector, val);
+      } else if (step.action === "select") {
+        await page.waitForSelector(step.selector, { timeout: 15000 });
+        await page.selectOption(step.selector, step.value);
       } else if (step.action === "robi") {
         await page.evaluate((phone) => {
           const accept = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Accept Cookies'));
