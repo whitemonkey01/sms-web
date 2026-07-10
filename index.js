@@ -430,28 +430,37 @@ async function runSite(browser, site, phone) {
   }
 }
 
-async function run(phone, count, delay) {
+async function run(phone, count, delay, loopInterval) {
   const disabled = loadDisabled();
   const activeSites = sites.filter(s => !disabled.includes(s.name));
   const browser = await chromium.launch({ headless: process.env.HEADLESS === 'false' ? false : true });
 
-  for (let i = 0; i < count; i++) {
-    console.log(`[${i + 1}/${count}]`);
-    const results = await Promise.allSettled([
-      ...activeSites.map((site) => runSite(browser, site, phone)),
-      sendBDTickets(phone),
-      sendMedEasy(phone),
-      sendRedX(phone),
-    ]);
-    for (const r of results) {
-      const v = r.value || {};
-      console.log(`  [${v.name}] ${v.status}${v.error ? " - " + v.error : ""}`);
+  let cycle = 0;
+  do {
+    if (loopInterval) console.log(`\n=== Cycle ${++cycle} ===`);
+    for (let i = 0; i < count; i++) {
+      console.log(`[${i + 1}/${count}]`);
+      const results = await Promise.allSettled([
+        ...activeSites.map((site) => runSite(browser, site, phone)),
+        sendBDTickets(phone),
+        sendMedEasy(phone),
+        sendRedX(phone),
+      ]);
+      for (const r of results) {
+        const v = r.value || {};
+        console.log(`  [${v.name}] ${v.status}${v.error ? " - " + v.error : ""}`);
+      }
+      if (i < count - 1 && delay > 0) {
+        console.log(`  Waiting ${delay}s ...`);
+        await new Promise((r) => setTimeout(r, delay * 1000));
+      }
     }
-    if (i < count - 1 && delay > 0) {
-      console.log(`  Waiting ${delay}s ...`);
-      await new Promise((r) => setTimeout(r, delay * 1000));
+
+    if (loopInterval) {
+      console.log(`  Waiting ${loopInterval}m until next cycle ...`);
+      await new Promise((r) => setTimeout(r, loopInterval * 60 * 1000));
     }
-  }
+  } while (loopInterval);
 
   await browser.close();
   console.log("Done");
@@ -464,8 +473,9 @@ if ((args.length > 0 || hasEnv) && !isMenu) {
   const phone = args[0] || process.env.PHONE;
   const count = parseInt(args[1] || process.env.COUNT || "1");
   const delay = parseInt(args[2] || process.env.DELAY || "3");
+  const loopInterval = parseInt(args[3] || process.env.LOOP_INTERVAL || "");
   if (!phone) {
-    console.error("Usage: sms-web <phone> [count] [delay]");
+    console.error("Usage: sms-web <phone> [count] [delay] [loop_minutes]");
     console.error("   or:  PHONE=xxx COUNT=2 DELAY=3 sms-web");
     process.exit(1);
   }
